@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package cloudwalker;
+
+import "google/protobuf/timestamp.proto";
+
+service WeWatch {
+    rpc Login(LoginRequest) returns (LoginResponse) {}
+    rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+
+    rpc Stream(stream StreamRequest) returns (stream StreamResponse) {}
+
+    rpc MakeRoom(MakeRoomRequest) returns (MakeRoomResponse) {}
+
+    rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {}
+
+}
+
+
+message JoinRoomRequest{
+    string token = 1;
+    int32 roomId = 2;
+}
+
+enum JoinState{
+    ALREADY = 0;
+    ADDED = 1;
+    UNKNOWN = -1;
+}
+
+message JoinRoomResponse{
+    JoinState jointState = 1;
+}
+
+
+message MakeRoomRequest{
+    string token = 1;
+}
+
+message MakeRoomResponse{
+    int32 roomId = 1;
+}
+
+
+
+
+message LoginRequest {
+    string password = 1;
+    string name     = 2;
+}
+
+message LoginResponse {
+    string token = 1;
+}
+
+message LogoutRequest {
+    string token = 1;
+}
+
+message LogoutResponse {}
+
+message StreamRequest {
+    string message = 1;
+}
+
+message StreamResponse {
+    google.protobuf.Timestamp timestamp = 1;
+
+    oneof event {
+        Login    client_login    = 2;
+        Logout   client_logout   = 3;
+        Message  client_message  = 4;
+        Shutdown server_shutdown = 5;
+    }
+}
+
+message Login {
+        string name = 1;
+}
+
+message Logout {
+        string name = 1;
+}
+
+
+
+message Message {
+        string name    = 1;
+        string message = 2;
+}
+
+message Shutdown {}
