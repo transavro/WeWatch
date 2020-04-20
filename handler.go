@@ -304,6 +304,7 @@ func (s *prime) Stream(srv pb.WeWatch_StreamServer) error {
 	}
 	token = md[tokenHeader][0]
 
+
 	s.nameMtx.RLock()
 	name, ok = s.NameMap[token]
 	s.nameMtx.RUnlock()
@@ -327,7 +328,7 @@ func (s *prime) Stream(srv pb.WeWatch_StreamServer) error {
 
 		s.BroadCast <- pb.StreamResponse{
 			Timestamp: ptypes.TimestampNow(),
-			Event:     &pb.StreamResponse_ClientMessage{ClientMessage: &pb.Message{Name: name, Message: req.Message}},
+			Event:     &pb.StreamResponse_ClientMessage{ClientMessage: &pb.Message{Name: name, PlayerState: req.PlayerState}},
 		}
 	}
 

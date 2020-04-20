@@ -128,7 +128,7 @@ func receive(sc chat.WeWatch_StreamClient) error {
 		case *chat.StreamResponse_ClientLogout:
 			log.Println("%s has logged out", evt.ClientLogout.Name)
 		case *chat.StreamResponse_ClientMessage:
-			log.Println( evt.ClientMessage.Name, evt.ClientMessage.Message)
+			log.Println( evt.ClientMessage.Name, evt.ClientMessage.PlayerState)
 		case *chat.StreamResponse_ServerShutdown:
 			log.Println( "the server is shutting down")
 		default:
@@ -152,8 +152,28 @@ func send(client chat.WeWatch_StreamClient,actualclient chat.WeWatchClient,   to
 			} else if sc.Text() == "logout" {
 				actualclient.Logout(context.Background(), &chat.LogoutRequest{Token: token})
 				os.Exit(0)
-			} else {
-				err := client.Send(&chat.StreamRequest{Message: sc.Text()})
+			} else if(sc.Text() == "play") {
+				err := client.Send(&chat.StreamRequest{PlayerState: chat.PlayerStates_PLAY})
+				if err != nil {
+					panic(err)
+				}
+			}else if(sc.Text() == "pause") {
+				err := client.Send(&chat.StreamRequest{PlayerState: chat.PlayerStates_PAUSE})
+				if err != nil {
+					panic(err)
+				}
+			}else if(sc.Text() == "forward") {
+				err := client.Send(&chat.StreamRequest{PlayerState: chat.PlayerStates_FORWARD})
+				if err != nil {
+					panic(err)
+				}
+			}else if(sc.Text() == "rewind") {
+				err := client.Send(&chat.StreamRequest{PlayerState: chat.PlayerStates_REWIND})
+				if err != nil {
+					panic(err)
+				}
+			}else {
+				err := client.Send(&chat.StreamRequest{PlayerState: chat.PlayerStates_UNRECOGNISED})
 				if err != nil {
 					panic(err)
 				}

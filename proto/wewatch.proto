@@ -4,6 +4,7 @@ package cloudwalker;
 
 import "google/protobuf/timestamp.proto";
 
+
 service WeWatch {
     rpc Login(LoginRequest) returns (LoginResponse) {}
     rpc Logout(LogoutRequest) returns (LogoutResponse) {}
@@ -60,7 +61,7 @@ message LogoutRequest {
 message LogoutResponse {}
 
 message StreamRequest {
-    string message = 1;
+    PlayerStates playerState = 1;
 }
 
 message StreamResponse {
@@ -74,6 +75,13 @@ message StreamResponse {
     }
 }
 
+message GroupMeta{
+    string url = 1;
+    string title = 2;
+    string subtitle = 3;
+    int64 duration = 4;
+}
+
 message Login {
         string name = 1;
 }
@@ -83,10 +91,20 @@ message Logout {
 }
 
 
+enum PlayerStates{
+    UNRECOGNISED = 0;
+    PLAY  = 1;
+    PAUSE = 2;
+    REWIND = 3;
+    FORWARD = 4;
+    BUFFER = 5;
+}
+
+
 
 message Message {
         string name    = 1;
-        string message = 2;
+        PlayerStates playerState = 2;
 }
 
 message Shutdown {}
