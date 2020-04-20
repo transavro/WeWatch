@@ -26,7 +26,7 @@ type prime struct {
 	NameMap   map[string]string
 	StreamMap map[string]chan pb.StreamResponse
 	RoomMap   map[int32][]string
-	RoomInfoMap map[int32] *pb.RoomMeta
+
 
 	BroadCast chan pb.StreamResponse
 }
@@ -36,7 +36,6 @@ func Prime() *prime {
 		NameMap:   make(map[string]string),
 		StreamMap: make(map[string]chan pb.StreamResponse),
 		RoomMap:   make(map[int32][]string),
-		RoomInfoMap: make(map[int32] *pb.RoomMeta),
 		BroadCast: make(chan pb.StreamResponse, 1000),
 	}
 }
@@ -201,7 +200,6 @@ func (s *prime) Logout(_ context.Context, req *pb.LogoutRequest) (*pb.LogoutResp
 		}
 		if len(temp) == 0 {
 			delete(s.RoomMap, k)
-			delete(s.RoomInfoMap , k)
 		}else {
 			s.RoomMap[k] = temp
 		}
@@ -247,7 +245,6 @@ func (s *prime) MakeRoom(_ context.Context, req *pb.MakeRoomRequest) (*pb.MakeRo
 	//Making roomMap and adding this as first Member
 	s.roomMtx.Lock()
 	s.RoomMap[roomId] = []string{req.Tkn}
-	s.RoomInfoMap[roomId] = req.RoomMeta
 	s.roomMtx.Unlock()
 	log.Println("MADE ROOM AND ADDED THIS USERS ", s.RoomMap)
 	return &pb.MakeRoomResponse{RoomId: roomId}, nil
@@ -289,12 +286,62 @@ func (s *prime) JoinRoom(_ context.Context, req *pb.JoinRoomRequest) (*pb.JoinRo
 	members = append(members, req.Token)
 	s.roomMtx.Lock()
 	s.RoomMap[req.RoomId] = members
-	resp.RoomMeta = s.RoomInfoMap[req.RoomId]
 	s.roomMtx.Unlock()
 	log.Println("NEW MEMBER ADDED ", s.RoomMap)
 	resp.JointState = pb.JoinState_ADDED
 
 	return &resp, nil
+}
+
+func (s *prime) LeaveRoom( _ context.Context, req *pb.LeaveRoomRequest) (*pb.LeaveRoomResponse, error) {
+	log.Println("LEAVE ROOM...")
+	var (
+		ok bool
+		temp []string
+	)
+
+	//check if token is valid
+	s.nameMtx.RLock()
+	_, ok = s.NameMap[req.Token]
+	s.nameMtx.RUnlock()
+	if !ok {
+		return nil, status.Error(codes.NotFound, "token not found")
+	}
+	log.Println("TOKEN VALIDATED...")
+	// check if the roomId is valid
+	s.roomMtx.RLock()
+	_, ok = s.RoomMap[req.RoomId]
+	s.roomMtx.RUnlock()
+	if !ok {
+		return &pb.LeaveRoomResponse{LeaveRoomState: pb.LeaveRoomResponse_NOT_EXISTS}, nil
+	}
+	log.Println("ROOM ID EXISTS... ",req.RoomId)
+
+	// removing from the room
+	s.roomMtx.Lock()
+
+	for _ , mem := range s.RoomMap[req.RoomId] {
+		if mem == req.Token {
+			continue
+		}
+		temp = append(temp, mem)
+	}
+	// if the temp and perv slice are same that means user is not a member
+	if len(temp) == len(s.RoomMap[req.RoomId]) {
+		s.roomMtx.Unlock()
+		log.Println("USER ALREADY REMOVED")
+		return &pb.LeaveRoomResponse{LeaveRoomState: pb.LeaveRoomResponse_ALREADY}, nil
+
+	}else if len(temp) == 0 {
+		//if the user was last member to be removed then delete the map entry
+		delete(s.RoomMap, req.RoomId)
+	}else {
+		// added the new members list to the map
+		s.RoomMap[req.RoomId] = temp
+	}
+	log.Println("USER REMOVED...")
+	s.roomMtx.Unlock()
+	return &pb.LeaveRoomResponse{LeaveRoomState: pb.LeaveRoomResponse_REMOVED}, nil
 }
 
 func (s *prime) Stream(srv pb.WeWatch_StreamServer) error {
@@ -335,7 +382,10 @@ func (s *prime) Stream(srv pb.WeWatch_StreamServer) error {
 
 		s.BroadCast <- pb.StreamResponse{
 			Timestamp: ptypes.TimestampNow(),
-			Event:     &pb.StreamResponse_ClientMessage{ClientMessage: &pb.Message{Name: name, PlayerState: req.PlayerState}},
+			Event:     &pb.StreamResponse_ClientMessage{ClientMessage: &pb.Message{
+				Name:                 name,
+				RoomMeta:             req.RoomMeta,
+			}},
 		}
 	}
 

@@ -15,8 +15,27 @@ service WeWatch {
 
     rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {}
 
+    rpc LeaveRoom(LeaveRoomRequest) returns (LeaveRoomResponse) {}
+
 }
 
+
+message LeaveRoomRequest{
+    int32 roomId = 1;
+    string token = 2;
+}
+
+
+
+message LeaveRoomResponse{
+    enum LeaveRoomState{
+        UNKNOWN = 0;
+        REMOVED = 1;
+        ALREADY = 2;
+        NOT_EXISTS = 3;
+    }
+    LeaveRoomState leaveRoomState = 1;
+}
 
 message JoinRoomRequest{
     string token = 1;
@@ -31,13 +50,11 @@ enum JoinState{
 
 message JoinRoomResponse{
     JoinState jointState = 1;
-    RoomMeta roomMeta = 2;
 }
 
 
 message MakeRoomRequest{
     string tkn = 1;
-    RoomMeta roomMeta = 2;
 }
 
 message MakeRoomResponse{
@@ -63,7 +80,7 @@ message LogoutRequest {
 message LogoutResponse {}
 
 message StreamRequest {
-    PlayerStates playerState = 1;
+    RoomMeta roomMeta = 1;
 }
 
 message StreamResponse {
@@ -78,10 +95,11 @@ message StreamResponse {
 }
 
 message RoomMeta{
+    PlayerStates playerState = 1;
     string url = 2;
     string title = 3;
     string subtitle = 4;
-    int64 duration = 5;
+    int64 currentPosition = 5;
 }
 
 message Login {
@@ -100,13 +118,12 @@ enum PlayerStates{
     REWIND = 3;
     FORWARD = 4;
     BUFFER = 5;
+    SYNC = 6;
 }
-
-
 
 message Message {
         string name    = 1;
-        PlayerStates playerState = 2;
+        RoomMeta roomMeta = 2;
 }
 
 message Shutdown {}
