@@ -18,6 +18,8 @@ var (
 	username   string
 )
 
+
+
 func init() {
 	flag.BoolVar(&serverMode, "s", false, "run as the server")
 	flag.BoolVar(&debugMode, "v", false, "enable debug logging")
@@ -36,7 +38,7 @@ func init() {
 func main() {
 	ctx := SingleContext(context.Background())
 	DebugLogf("Starting server...")
-	if err := Server(":5000", "cloudwalker").Run(ctx); err != nil {
+	if err := Prime().Run(ctx); err != nil {
 		MessageLog(time.Now(), "<<Process>>", err.Error())
 		os.Exit(1)
 	}
