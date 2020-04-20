@@ -26,6 +26,7 @@ type prime struct {
 	NameMap   map[string]string
 	StreamMap map[string]chan pb.StreamResponse
 	RoomMap   map[int32][]string
+	RoomInfoMap map[int32] *pb.RoomMeta
 
 	BroadCast chan pb.StreamResponse
 }
@@ -35,6 +36,7 @@ func Prime() *prime {
 		NameMap:   make(map[string]string),
 		StreamMap: make(map[string]chan pb.StreamResponse),
 		RoomMap:   make(map[int32][]string),
+		RoomInfoMap: make(map[int32] *pb.RoomMeta),
 		BroadCast: make(chan pb.StreamResponse, 1000),
 	}
 }
@@ -199,6 +201,7 @@ func (s *prime) Logout(_ context.Context, req *pb.LogoutRequest) (*pb.LogoutResp
 		}
 		if len(temp) == 0 {
 			delete(s.RoomMap, k)
+			delete(s.RoomInfoMap , k)
 		}else {
 			s.RoomMap[k] = temp
 		}
@@ -222,7 +225,7 @@ func (s *prime) MakeRoom(_ context.Context, req *pb.MakeRoomRequest) (*pb.MakeRo
 		roomId int32
 	)
 	s.nameMtx.RLock()
-	_, ok = s.NameMap[req.Token]
+	_, ok = s.NameMap[req.Tkn]
 	s.nameMtx.RUnlock()
 	if !ok {
 		return nil, status.Error(codes.NotFound, "token not found")
@@ -243,7 +246,8 @@ func (s *prime) MakeRoom(_ context.Context, req *pb.MakeRoomRequest) (*pb.MakeRo
 	log.Println("MAKE ROOM ID.. ", roomId)
 	//Making roomMap and adding this as first Member
 	s.roomMtx.Lock()
-	s.RoomMap[roomId] = []string{req.Token}
+	s.RoomMap[roomId] = []string{req.Tkn}
+	s.RoomInfoMap[roomId] = req.RoomMeta
 	s.roomMtx.Unlock()
 	log.Println("MADE ROOM AND ADDED THIS USERS ", s.RoomMap)
 	return &pb.MakeRoomResponse{RoomId: roomId}, nil
@@ -280,14 +284,17 @@ func (s *prime) JoinRoom(_ context.Context, req *pb.JoinRoomRequest) (*pb.JoinRo
 	}
 	log.Println("ROOM MEMBER NOT PRESENT ", s.RoomMap)
 
+	var resp pb.JoinRoomResponse
 	//if the user is not present add him
 	members = append(members, req.Token)
 	s.roomMtx.Lock()
 	s.RoomMap[req.RoomId] = members
+	resp.RoomMeta = s.RoomInfoMap[req.RoomId]
 	s.roomMtx.Unlock()
 	log.Println("NEW MEMBER ADDED ", s.RoomMap)
+	resp.JointState = pb.JoinState_ADDED
 
-	return &pb.JoinRoomResponse{JointState: pb.JoinState_ADDED}, nil
+	return &resp, nil
 }
 
 func (s *prime) Stream(srv pb.WeWatch_StreamServer) error {

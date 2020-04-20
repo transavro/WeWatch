@@ -31,11 +31,13 @@ enum JoinState{
 
 message JoinRoomResponse{
     JoinState jointState = 1;
+    RoomMeta roomMeta = 2;
 }
 
 
 message MakeRoomRequest{
-    string token = 1;
+    string tkn = 1;
+    RoomMeta roomMeta = 2;
 }
 
 message MakeRoomResponse{
@@ -75,11 +77,11 @@ message StreamResponse {
     }
 }
 
-message GroupMeta{
-    string url = 1;
-    string title = 2;
-    string subtitle = 3;
-    int64 duration = 4;
+message RoomMeta{
+    string url = 2;
+    string title = 3;
+    string subtitle = 4;
+    int64 duration = 5;
 }
 
 message Login {
